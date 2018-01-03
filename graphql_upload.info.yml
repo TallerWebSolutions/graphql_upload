@@ -1,0 +1,7 @@
+name: GraphQL Upload
+type: module
+description: Augments Drupal GraphQL to handle file uploads.
+core: 8.x
+dependencies:
+  - graphql
+  - graphql_core
