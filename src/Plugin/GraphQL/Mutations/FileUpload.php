@@ -3,7 +3,7 @@
 namespace Drupal\graphql_upload\Plugin\GraphQL\Mutations;
 
 use Youshido\GraphQL\Execution\ResolveInfo;
-use Drupal\graphql\Plugin\GraphQL\InputTypes\InputTypePluginBase;
+use Drupal\graphql\GraphQL\Type\InputObjectType;
 use Drupal\graphql_core\Plugin\GraphQL\Mutations\Entity\CreateEntityBase;
 use Drupal\file\Entity\File;
 
@@ -18,7 +18,7 @@ use Drupal\file\Entity\File;
  *   entity_type = "file",
  *   entity_bundle = "file",
  *   arguments = {
- *     "input" = "FileUploadInput",
+ *     "input" = "FileUploadInput"
  *   }
  * )
  */
@@ -50,11 +50,14 @@ class FileUpload extends CreateEntityBase {
     return $entity;
   }
 
+
   /**
    * {@inheritdoc}
    */
-  protected function extractEntityInput(array $inputArgs, InputTypePluginBase $inputType) {
-    return $inputArgs;
+  protected function extractEntityInput(array $inputArgs, InputObjectType $inputType, ResolveInfo $info) {
+    return [
+      'name' => $inputArgs['name']
+    ];
   }
 
 }
