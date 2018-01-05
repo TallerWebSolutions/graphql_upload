@@ -2,6 +2,7 @@
 
 namespace Drupal\graphql_upload\Plugin\GraphQL\Mutations;
 
+use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Youshido\GraphQL\Execution\ResolveInfo;
@@ -9,6 +10,7 @@ use Drupal\graphql\GraphQL\Type\InputObjectType;
 use Drupal\graphql_core\Plugin\GraphQL\Mutations\Entity\CreateEntityBase;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\FileBag;
 use Drupal\file\Entity\File;
 
 /**
@@ -84,31 +86,52 @@ class FileUpload extends CreateEntityBase {
    * {@inheritdoc}
    */
   public function resolve($value, array $args, ResolveInfo $info) {
-    $file = $args['input'];
 
+    $additional_validators = ['file_validate_size' => '2M'];
+    $file_entities = [];
 
-    $data = file_get_contents($file);
-    if($data == NULL){
-      return NULL;
+    /** @var \Symfony\Component\HttpFoundation\FileBag $_FILES */
+    /** @var \Symfony\Component\HttpFoundation\File\UploadedFile $file */
+    foreach ($_FILES->all() as $file) {
+      if (file_exists($file->getPathname())) {
+
+        $new_file = $file->move($file->getPath(), $file->getClientOriginalName());
+
+        $entity = $this->uploadSave->createFile(
+          $file->getPath() . '/' . $file->getClientOriginalName(),
+          'public://',
+          'jpg jpeg gif png txt doc xls pdf ppt pps odt ods odp',
+          \Drupal::currentUser(),
+          $additional_validators
+        );
+        $file_entities[] = $entity;
+      }
     }
 
-    $destination = file_default_scheme() . '://graphql-upload-files/' . $file->getClientOriginalName();
-    $directory = file_stream_wrapper_uri_normalize(dirname($destination));
+    return $file_entities[0];
 
-    if (!file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
-      throw new \Exception('Could not created destination directory.');
-    }
-
-    $entity = file_save_data($data, $destination);
-
-    if (!$entity) {
-      throw new \Exception('Could not upload file.');
-    }
-
-    $entity->setTemporary();
-    $entity->save();
-
-    return $entity;
+//    $data = file_get_contents($file);
+//    if($data == NULL){
+//      return NULL;
+//    }
+//
+//    $destination = file_default_scheme() . '://graphql-upload-files/' . $file->getClientOriginalName();
+//    $directory = file_stream_wrapper_uri_normalize(dirname($destination));
+//
+//    if (!file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
+//      throw new \Exception('Could not created destination directory.');
+//    }
+//
+//    $entity = file_save_data($data, $destination);
+//
+//    if (!$entity) {
+//      throw new \Exception('Could not upload file.');
+//    }
+//
+//    $entity->setTemporary();
+//    $entity->save();
+//
+//    return $entity;
   }
 
 
