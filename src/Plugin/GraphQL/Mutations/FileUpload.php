@@ -2,6 +2,7 @@
 
 namespace Drupal\graphql_upload\Plugin\GraphQL\Mutations;
 
+use Symfony\Component\HttpFoundation\File\Exception\FileException;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -21,6 +22,7 @@ use Drupal\file\Entity\File;
  *   secure = "false",
  *   name = "fileUpload",
  *   type = "File",
+ *   multi = true,
  *   entity_type = "file",
  *   entity_bundle = "file",
  *   arguments = {
@@ -95,7 +97,15 @@ class FileUpload extends CreateEntityBase {
     foreach ($_FILES->all() as $file) {
       if (file_exists($file->getPathname())) {
 
-        $new_file = $file->move($file->getPath(), $file->getClientOriginalName());
+        // Super hacky way of renaming the file back to the original because of
+        // the oAuth bug we are dealing with in the GraphQLSimpleOauthAuthenticationProvider override
+        try {
+          $file->move($file->getPath(), $file->getClientOriginalName());
+        }catch(FileException $e){
+          watchdog_exception('GraphQL Upload Exception - Sad Face', $e);
+
+          return NULL;
+        }
 
         $entity = $this->uploadSave->createFile(
           $file->getPath() . '/' . $file->getClientOriginalName(),
@@ -108,30 +118,8 @@ class FileUpload extends CreateEntityBase {
       }
     }
 
-    return $file_entities[0];
+    return $file_entities;
 
-//    $data = file_get_contents($file);
-//    if($data == NULL){
-//      return NULL;
-//    }
-//
-//    $destination = file_default_scheme() . '://graphql-upload-files/' . $file->getClientOriginalName();
-//    $directory = file_stream_wrapper_uri_normalize(dirname($destination));
-//
-//    if (!file_prepare_directory($directory, FILE_CREATE_DIRECTORY)) {
-//      throw new \Exception('Could not created destination directory.');
-//    }
-//
-//    $entity = file_save_data($data, $destination);
-//
-//    if (!$entity) {
-//      throw new \Exception('Could not upload file.');
-//    }
-//
-//    $entity->setTemporary();
-//    $entity->save();
-//
-//    return $entity;
   }
 
 
