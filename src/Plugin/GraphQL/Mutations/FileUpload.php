@@ -114,6 +114,9 @@ class FileUpload extends CreateEntityBase {
           \Drupal::currentUser(),
           $additional_validators
         );
+        $entity->save();
+        $entity->setPermanent();
+
         $file_entities[] = $entity;
       }
     }
