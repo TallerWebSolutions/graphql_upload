@@ -1,0 +1,7 @@
+services:
+  graphql_upload.upload_save:
+    class: Drupal\graphql_upload\GraphQLUploadSave
+    arguments: ['@entity.manager', '@file.mime_type.guesser', '@file_system', '@logger.factory', '@renderer', '@config.factory', '@token']
+  graphql_upload.upload_handler:
+    class: Drupal\graphql_upload\UploadHandler
+    arguments: ['@request_stack', '@config.factory', '@transliteration', '@language_manager']

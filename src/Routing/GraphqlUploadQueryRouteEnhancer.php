@@ -7,6 +7,40 @@ use Symfony\Component\HttpFoundation\Request;
 
 class GraphqlUploadQueryRouteEnhancer extends QueryRouteEnhancer {
 
+
+  /**
+   * Extract an associative array of query parameters from the request.
+   *
+   * If the given request does not have any POST body content check for a POST
+   * query parameter otherwise use the GET query parameters instead. The additional
+   * check for the ParametersBag query is necessary when sending FormData such as
+   * needed when sending files along with the query from the client.
+   *
+   * @param \Symfony\Component\HttpFoundation\Request $request
+   *   The request object.
+   *
+   * @return array
+   *   An associative array of query parameters.
+   */
+  protected function extractParams(Request $request) {
+
+    $values = ($content = $request->getContent()) ? json_decode($content, TRUE) : $request->query->all();
+    $parameters = $request->request->all();
+    if (count($parameters) > 0){
+      $values = isset($request->request) ? json_decode($this->extractQueryFromParameterBag($request->request->all()), TRUE): $request->query->all();
+    }
+
+    return array_map(function($value) {
+      if (!is_string($value)) {
+        return $value;
+      }
+
+      $decoded = json_decode($value, TRUE);
+      return ($decoded != $value) && $decoded ? $decoded : $value;
+    }, $values ?: []);
+  }
+
+
   private function setValue(array &$arr, array $path, $value) {
     $ref = &$arr;
 
