@@ -15,25 +15,6 @@ use Symfony\Component\HttpFoundation\Request;
 class GraphQLSimpleOauthAuthenticationProvider extends SimpleOauthAuthenticationProvider {
 
   /**
-   * Extract the query from the parameter bag
-   *
-   * Search the parameter bag array for a query
-   *
-   * @param array $parameters
-   *   The parameter bag array.
-   *
-   * @return string
-   *   The query
-   */
-  protected function extractQueryFromParameterBag(array $parameters){
-    foreach ($parameters as $key => $value){
-      if (strpos($value, 'query')){
-        return $value;
-      }
-    }
-  }
-
-  /**
    * {@inheritdoc}
    */
   public function authenticate(Request $request) {
