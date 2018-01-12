@@ -3,16 +3,19 @@
 namespace Drupal\graphql_upload\Plugin\GraphQL\Mutations;
 
 use Symfony\Component\HttpFoundation\File\Exception\FileException;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\File\UploadedFile;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Symfony\Component\HttpFoundation\FileBag;
 use Youshido\GraphQL\Execution\ResolveInfo;
 use Drupal\graphql\GraphQL\Type\InputObjectType;
 use Drupal\graphql_core\Plugin\GraphQL\Mutations\Entity\CreateEntityBase;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
-use Symfony\Component\DependencyInjection\ContainerInterface;
-use Symfony\Component\HttpFoundation\FileBag;
+use Drupal\media_entity\Entity\Media;
+use Drupal\media_entity\Entity\MediaBundle;
 use Drupal\file\Entity\File;
+use Drupal\media_entity_image\Plugin\MediaEntity\Type\Image;
 
 /**
  * A sample file upload mutation.
@@ -21,7 +24,7 @@ use Drupal\file\Entity\File;
  *   id = "file_upload",
  *   secure = "false",
  *   name = "fileUpload",
- *   type = "File",
+ *   type = "MediaImage",
  *   multi = true,
  *   entity_type = "file",
  *   entity_bundle = "file",
@@ -46,6 +49,14 @@ class FileUpload extends CreateEntityBase {
    */
   protected $uploadSave;
 
+
+  /**
+   * Current user service.
+   *
+   * @var \Drupal\Core\Session\AccountProxyInterface
+   */
+  protected $currentUser;
+
   /**
    * Constructs a Drupal\Component\Plugin\PluginBase object.
    *
@@ -57,14 +68,11 @@ class FileUpload extends CreateEntityBase {
    *   The plugin implementation definition.
    * @param EntityTypeManagerInterface $entityTypeManager
    *   The plugin implemented entityTypeManager
-   * @param \Drupal\graphql_file_upload\UploadHandler $uploadHandler
-   *   The upload Handler
    * @param \Drupal\graphql_file_upload\GraphQLUploadSave
    *   The upload save
    */
-  public function __construct(array $configuration, $pluginId, $pluginDefinition, EntityTypeManagerInterface $entityTypeManager, $uploadHandler, $uploadSave) {
+  public function __construct(array $configuration, $pluginId, $pluginDefinition, EntityTypeManagerInterface $entityTypeManager, $uploadSave) {
     $this->entityTypeManager = $entityTypeManager;
-    $this->uploadHandler = $uploadHandler;
     $this->uploadSave = $uploadSave;
     $this->currentUser = \Drupal::currentUser();
     parent::__construct($configuration, $pluginId, $pluginDefinition, $entityTypeManager);
@@ -79,7 +87,6 @@ class FileUpload extends CreateEntityBase {
       $pluginId,
       $pluginDefinition,
       $container->get('entity_type.manager'),
-      $container->get('graphql_upload.upload_handler'),
       $container->get('graphql_upload.upload_save')
     );
   }
@@ -91,6 +98,7 @@ class FileUpload extends CreateEntityBase {
 
     $additional_validators = ['file_validate_size' => '2M'];
     $file_entities = [];
+    $media_entities = [];
 
     /** @var \Symfony\Component\HttpFoundation\FileBag $_FILES */
     /** @var \Symfony\Component\HttpFoundation\File\UploadedFile $file */
@@ -110,19 +118,34 @@ class FileUpload extends CreateEntityBase {
         $entity = $this->uploadSave->createFile(
           $file->getPath() . '/' . $file->getClientOriginalName(),
           'public://',
-          'jpg jpeg gif png txt doc xls pdf ppt pps odt ods odp',
+          'jpg jpeg gif png',
           \Drupal::currentUser(),
           $additional_validators
         );
         $entity->setPermanent();
         $entity->save();
 
+        // Save media entity
+        $media = [
+          'bundle' => 'image',
+          'uid' => $this->currentUser->id(),
+          'status' => Media::PUBLISHED,
+          'field_image' => [
+            'target_id' => $entity->id(),
+            'alt' => t('temp'),
+            'title' => t('temp'),
+          ],
+        ];
+        $image_media = Media::create($media);
+        $image_media->save();
 
+        $media_entities[] = $image_media;
         $file_entities[] = $entity;
       }
     }
 
-    return $file_entities;
+
+    return $media_entities;
 
   }
 
