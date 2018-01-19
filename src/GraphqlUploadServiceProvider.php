@@ -20,5 +20,9 @@ class GraphqlUploadServiceProvider extends ServiceProviderBase {
     $container
       ->getDefinition('graphql.route_enhancer.query')
       ->setClass('Drupal\graphql_upload\Routing\GraphqlUploadQueryRouteEnhancer');
+
+    $container
+      ->getDefinition('simple_oauth.authentication.simple_oauth')
+      ->setClass('Drupal\graphql_upload\Authentication\Provider\GraphQLSimpleOauthAuthenticationProvider');
   }
 }
